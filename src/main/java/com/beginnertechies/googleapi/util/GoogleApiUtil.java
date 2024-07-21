@@ -84,7 +84,7 @@ public class GoogleApiUtil {
 		if (values == null || values.isEmpty()) {
 			System.out.println("No data found.");
 		} else {
-			for (List row : values) {
+			for (List<Object> row : values) {
 				storeDataFromGoogleSheet.put(row.get(0), row.get(4));
 			}
 		}
@@ -144,7 +144,8 @@ public class GoogleApiUtil {
 				.setRole("writer")
 				.setEmailAddress(email);
 		try {
-			driveService.permissions().create(response.getSpreadsheetId(), permission)
+			driveService.permissions()
+						.create(response.getSpreadsheetId(), permission)
 						.setSendNotificationEmail(true)
 						.setEmailMessage("Google Sheet Permission testing");
 		} catch (IOException e) {
