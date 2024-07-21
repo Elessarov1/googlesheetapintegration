@@ -75,7 +75,6 @@ public class GoogleApiUtil {
 	}
 
 	public Map<Object, Object> getDataFromSheet() throws GeneralSecurityException, IOException {
-		// Build a new authorized API client service.
 		final String spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
 		final String range = "Class Data!A2:E";
 		Sheets service = getSheetService();
@@ -101,37 +100,55 @@ public class GoogleApiUtil {
 	private Drive getDriveService() throws GeneralSecurityException, IOException {
 		final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 		return new Drive.Builder(httpTransport, JSON_FACTORY, getCredentials(httpTransport))
-				.setApplicationName(APPLICATION_NAME).build();
+				.setApplicationName(APPLICATION_NAME)
+				.build();
 	}
 
-	public GoogleSheetResponseDTO createGoogleSheet(GoogleSheetDTO request)
-			throws GeneralSecurityException, IOException {
+	public GoogleSheetResponseDTO createGoogleSheet(GoogleSheetDTO request) throws GeneralSecurityException, IOException {
 		Sheets service = getSheetService();
 		SpreadsheetProperties spreadsheetProperties = new SpreadsheetProperties();
 		spreadsheetProperties.setTitle(request.getSheetName());
+
 		SheetProperties sheetProperties = new SheetProperties();
 		sheetProperties.setTitle(request.getSheetName());
+
 		Sheet sheet = new Sheet().setProperties(sheetProperties);
-		Spreadsheet spreadsheet = new Spreadsheet().setProperties(spreadsheetProperties)
+		Spreadsheet spreadsheet = new Spreadsheet()
+				.setProperties(spreadsheetProperties)
 				.setSheets(Collections.singletonList(sheet));
-		Spreadsheet createdResponse = service.spreadsheets().create(spreadsheet).execute();
+
+		Spreadsheet createdResponse = service.spreadsheets()
+											 .create(spreadsheet)
+											 .execute();
+
 		final var googleSheetResponseDTO = new GoogleSheetResponseDTO();
 		ValueRange valueRange = new ValueRange().setValues(request.getDataToBeUpdated());
-		service.spreadsheets().values().update(createdResponse.getSpreadsheetId(), "A1", valueRange)
-				.setValueInputOption("RAW").execute();
+
+		service.spreadsheets()
+			   .values()
+			   .update(createdResponse.getSpreadsheetId(), "A1", valueRange)
+			   .setValueInputOption("RAW")
+			   .execute();
 		googleSheetResponseDTO.setSpreadSheetId(createdResponse.getSpreadsheetId());
 		googleSheetResponseDTO.setSpeadSheetUrl(createdResponse.getSpreadsheetUrl());
 
 		Drive driveService = getDriveService();
-		request.getEmails().forEach(emailAddress -> {
-			Permission permission = new Permission().setType("user").setRole("writer").setEmailAddress(emailAddress);
-			try {
-				driveService.permissions().create(createdResponse.getSpreadsheetId(), permission)
-						.setSendNotificationEmail(true).setEmailMessage("Google Sheet Permission testing");
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		});
+		request.getEmails()
+			   .forEach(emailAddress -> createPermissions(emailAddress, driveService, createdResponse));
 		return googleSheetResponseDTO;
+	}
+
+	private void createPermissions(String email, Drive driveService, Spreadsheet response){
+		Permission permission = new Permission()
+				.setType("user")
+				.setRole("writer")
+				.setEmailAddress(email);
+		try {
+			driveService.permissions().create(response.getSpreadsheetId(), permission)
+						.setSendNotificationEmail(true)
+						.setEmailMessage("Google Sheet Permission testing");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }
